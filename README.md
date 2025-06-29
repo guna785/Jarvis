@@ -1,2 +1,2 @@
 # Jarvis
-C# OS - based on COSMOS
+Smart Operating System
