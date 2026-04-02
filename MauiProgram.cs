@@ -14,9 +14,16 @@ public static class MauiProgram
 				fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
 				fonts.AddFont("OpenSans-Semibold.ttf", "OpenSansSemibold");
 			});
-
+        builder.ConfigureMauiHandlers(handlers => {
+#if ANDROID
+            // Pierce through the Activity Background
+            Microsoft.Maui.Handlers.PageHandler.Mapper.AppendToMapping("TransparentPage", (handler, view) => {
+                handler.PlatformView.SetBackgroundColor(Android.Graphics.Color.Transparent);
+            });
+#endif
+        });
 #if DEBUG
-		builder.Logging.AddDebug();
+        builder.Logging.AddDebug();
 #endif
 
 		return builder.Build();

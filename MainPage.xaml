@@ -1,28 +1,64 @@
 ﻿<?xml version="1.0" encoding="utf-8" ?>
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+            BackgroundColor="Transparent"
+             Shell.NavBarIsVisible="False"
+             Shell.BackgroundColor="Transparent"
+             Shell.PresentationMode="NotAnimated"
              x:Class="Jarvis.MainPage">
 
     <ScrollView>
         <VerticalStackLayout
             Padding="30,0"
+            Margin="50"
             Spacing="25">
-            <Image
-                Source="dotnet_bot.png"
-                HeightRequest="185"
-                Aspect="AspectFit"
-                SemanticProperties.Description="dot net bot in a submarine number ten" />
+            <Grid HorizontalOptions="Center" VerticalOptions="Center" InputTransparent="True">
 
+                <Ellipse Stroke="#8000D4FF" StrokeThickness="3" WidthRequest="240" HeightRequest="240" />
+
+                <Ellipse Stroke="#C000D4FF" StrokeThickness="1" StrokeDashArray="0.05, 0.45" WidthRequest="220" HeightRequest="220" />
+
+                <Ellipse x:Name="EnergyGate"
+                 Stroke="#00D4FF"
+                 StrokeThickness="6"
+                 StrokeDashArray="10, 2" 
+                 WidthRequest="180" 
+                 HeightRequest="180">
+                    <Ellipse.Shadow>
+                        <Shadow Brush="#00D4FF" Radius="15" Opacity="0.5" />
+                    </Ellipse.Shadow>
+                </Ellipse>
+
+                <Grid x:Name="TextOrbit" WidthRequest="150" HeightRequest="150">
+                    <BoxView HeightRequest="2" WidthRequest="10" BackgroundColor="#00D4FF" HorizontalOptions="Start" VerticalOptions="Center" />
+                    <Label Text="BRAIN" TextColor="#00D4FF" FontSize="8" Rotation="-90" HorizontalOptions="Center" VerticalOptions="Start" Margin="0,5,0,0"/>
+                    <BoxView HeightRequest="2" WidthRequest="10" BackgroundColor="#00D4FF" HorizontalOptions="End" VerticalOptions="Center" />
+                    <Label Text="CORE" TextColor="#00D4FF" FontSize="8" Rotation="90" HorizontalOptions="Center" VerticalOptions="End" Margin="0,0,0,5"/>
+                </Grid>
+
+                <Grid x:Name="MainCore" WidthRequest="90" HeightRequest="90">
+                    <Ellipse Fill="#9000D4FF" Opacity="0.3">
+                        <Ellipse.Shadow>
+                            <Shadow Brush="#00D4FF" Radius="50" Opacity="0.9" />
+                        </Ellipse.Shadow>
+                    </Ellipse>
+
+                    <Ellipse Stroke="#00D4FF" StrokeThickness="10" StrokeDashArray="0.2, 0.1" WidthRequest="70" HeightRequest="70" />
+
+                    <Ellipse x:Name="CoreCenter" Fill="White" WidthRequest="40" HeightRequest="40" Scale="0.8" />
+                </Grid>
+
+            </Grid>
             <Label
-                Text="Hello, World!"
+                Text="Hello, I,m JARVIS!"
                 Style="{StaticResource Headline}"
                 SemanticProperties.HeadingLevel="Level1" />
 
             <Label
-                Text="Welcome to &#10;.NET Multi-platform App UI"
+                Text="Welcome to  to Our World"
                 Style="{StaticResource SubHeadline}"
                 SemanticProperties.HeadingLevel="Level2"
-                SemanticProperties.Description="Welcome to dot net Multi platform App U I" />
+                SemanticProperties.Description="Welcome to Our World" />
 
             <Button
                 x:Name="CounterBtn"
