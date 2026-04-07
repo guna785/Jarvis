@@ -1,4 +1,7 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using CommunityToolkit.Maui;
+using Jarvis.Contract;
+using Jarvis.Services;
+using Microsoft.Extensions.Logging;
 
 namespace Jarvis;
 
@@ -13,7 +16,10 @@ public static class MauiProgram
 			{
 				fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
 				fonts.AddFont("OpenSans-Semibold.ttf", "OpenSansSemibold");
-			});
+			}).UseMauiCommunityToolkit();
+#if ANDROID
+        builder.Services.AddSingleton<IContinuousMicService, ContinuousMicImplementation>();
+#endif
         builder.ConfigureMauiHandlers(handlers => {
 #if ANDROID
             // Pierce through the Activity Background

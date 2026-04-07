@@ -1,72 +1,60 @@
 ﻿<?xml version="1.0" encoding="utf-8" ?>
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
-             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-            BackgroundColor="Transparent"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"            
              Shell.NavBarIsVisible="False"
              Shell.BackgroundColor="Transparent"
              Shell.PresentationMode="NotAnimated"
+             BackgroundColor="#01050a"
              x:Class="Jarvis.MainPage">
+    <Grid BackgroundColor="#01050a">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
 
-    <ScrollView>
-        <VerticalStackLayout
-            Padding="30,0"
-            Margin="50"
-            Spacing="25">
-            <Grid HorizontalOptions="Center" VerticalOptions="Center" InputTransparent="True">
+        <BoxView x:Name="ScannerLine" Grid.Row="0" HeightRequest="2" WidthRequest="350" VerticalOptions="Start" HorizontalOptions="Center" Color="#00e6ff" Opacity="0.3">
+            <BoxView.Shadow>
+                <Shadow Brush="#00e6ff" Radius="15" Opacity="1" />
+            </BoxView.Shadow>
+        </BoxView>
 
-                <Ellipse Stroke="#8000D4FF" StrokeThickness="3" WidthRequest="240" HeightRequest="240" />
+        <Grid Grid.Row="0" WidthRequest="360" HeightRequest="360" HorizontalOptions="Center" VerticalOptions="Center">
 
-                <Ellipse Stroke="#C000D4FF" StrokeThickness="1" StrokeDashArray="0.05, 0.45" WidthRequest="220" HeightRequest="220" />
+            <Ellipse x:Name="HoloGlow" Fill="#00e6ff" Opacity="0.05" WidthRequest="360" HeightRequest="360">
+                <Ellipse.Shadow>
+                    <Shadow Brush="#00aaff" Radius="100" Opacity="1" />
+                </Ellipse.Shadow>
+            </Ellipse>
 
-                <Ellipse x:Name="EnergyGate"
-                 Stroke="#00D4FF"
-                 StrokeThickness="6"
-                 StrokeDashArray="10, 2" 
-                 WidthRequest="180" 
-                 HeightRequest="180">
-                    <Ellipse.Shadow>
-                        <Shadow Brush="#00D4FF" Radius="15" Opacity="0.5" />
-                    </Ellipse.Shadow>
-                </Ellipse>
+            <Ellipse x:Name="DataRing1" Stroke="#00e6ff" StrokeThickness="1" StrokeDashArray="2, 8, 2, 40" WidthRequest="300" HeightRequest="300" Opacity="0.6"/>
 
-                <Grid x:Name="TextOrbit" WidthRequest="150" HeightRequest="150">
-                    <BoxView HeightRequest="2" WidthRequest="10" BackgroundColor="#00D4FF" HorizontalOptions="Start" VerticalOptions="Center" />
-                    <Label Text="BRAIN" TextColor="#00D4FF" FontSize="8" Rotation="-90" HorizontalOptions="Center" VerticalOptions="Start" Margin="0,5,0,0"/>
-                    <BoxView HeightRequest="2" WidthRequest="10" BackgroundColor="#00D4FF" HorizontalOptions="End" VerticalOptions="Center" />
-                    <Label Text="CORE" TextColor="#00D4FF" FontSize="8" Rotation="90" HorizontalOptions="Center" VerticalOptions="End" Margin="0,0,0,5"/>
-                </Grid>
+            <Ellipse Stroke="#003366" StrokeThickness="4" WidthRequest="260" HeightRequest="260" />
+            <Ellipse x:Name="DataRing2" Stroke="#00aaff" StrokeThickness="3" StrokeDashArray="30, 5, 2, 5" WidthRequest="240" HeightRequest="240" />
 
-                <Grid x:Name="MainCore" WidthRequest="90" HeightRequest="90">
-                    <Ellipse Fill="#9000D4FF" Opacity="0.3">
-                        <Ellipse.Shadow>
-                            <Shadow Brush="#00D4FF" Radius="50" Opacity="0.9" />
-                        </Ellipse.Shadow>
-                    </Ellipse>
+            <Ellipse x:Name="QuantumRing" Stroke="#ffffff" StrokeThickness="2" StrokeDashArray="1, 4" WidthRequest="160" HeightRequest="160" Opacity="0.8">
+                <Ellipse.Shadow>
+                    <Shadow Brush="#00e6ff" Radius="10" Opacity="1" />
+                </Ellipse.Shadow>
+            </Ellipse>
 
-                    <Ellipse Stroke="#00D4FF" StrokeThickness="10" StrokeDashArray="0.2, 0.1" WidthRequest="70" HeightRequest="70" />
+            <Polygon x:Name="GlitchCyan" Points="40,0 80,20 80,65 40,85 0,65 0,20" Fill="#00ffff" Opacity="0" TranslationX="-4" TranslationY="3" WidthRequest="80" HeightRequest="85" HorizontalOptions="Center" VerticalOptions="Center" />
+            <Polygon x:Name="GlitchRed" Points="40,0 80,20 80,65 40,85 0,65 0,20" Fill="#ff0055" Opacity="0" TranslationX="4" TranslationY="-3" WidthRequest="80" HeightRequest="85" HorizontalOptions="Center" VerticalOptions="Center" />
 
-                    <Ellipse x:Name="CoreCenter" Fill="White" WidthRequest="40" HeightRequest="40" Scale="0.8" />
-                </Grid>
+            <Polygon x:Name="MainCore" Points="40,0 80,20 80,65 40,85 0,65 0,20" Fill="#ffffff" WidthRequest="80" HeightRequest="85" HorizontalOptions="Center" VerticalOptions="Center">
+                <Polygon.Shadow>
+                    <Shadow Brush="#ffffff" Radius="40" Opacity="1" />
+                </Polygon.Shadow>
+            </Polygon>
 
-            </Grid>
-            <Label
-                Text="Hello, I,m JARVIS!"
-                Style="{StaticResource Headline}"
-                SemanticProperties.HeadingLevel="Level1" />
+            <Ellipse x:Name="SonarRipple1" Stroke="#00e6ff" StrokeThickness="4" WidthRequest="80" HeightRequest="80" Opacity="0" HorizontalOptions="Center" VerticalOptions="Center"/>
+            <Ellipse x:Name="SonarRipple2" Stroke="#00e6ff" StrokeThickness="2" WidthRequest="80" HeightRequest="80" Opacity="0" HorizontalOptions="Center" VerticalOptions="Center"/>
 
-            <Label
-                Text="Welcome to  to Our World"
-                Style="{StaticResource SubHeadline}"
-                SemanticProperties.HeadingLevel="Level2"
-                SemanticProperties.Description="Welcome to Our World" />
+        </Grid>
+        <VerticalStackLayout Grid.Row="1" HorizontalOptions="Center" Margin="0,0,0,50" Spacing="20">
 
-            <Button
-                x:Name="CounterBtn"
-                Text="Click me" 
-                SemanticProperties.Hint="Counts the number of times you click"
-                Clicked="OnCounterClicked"
-                HorizontalOptions="Fill" />
+            <Label x:Name="TranscriptLabel" Text="Awaiting initialization..." TextColor="#00e6ff" FontFamily="Consolas" HorizontalOptions="Center" HorizontalTextAlignment="Center" MaxLines="3" LineBreakMode="WordWrap" WidthRequest="320"/>
+
         </VerticalStackLayout>
-    </ScrollView>
 
+    </Grid>
 </ContentPage>
