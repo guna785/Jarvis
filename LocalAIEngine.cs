@@ -1,4 +1,4 @@
-﻿using Microsoft.ML.OnnxRuntimeGenAI;
+using Microsoft.ML.OnnxRuntimeGenAI;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -10,12 +10,8 @@ namespace Jarvis
     {
         private Model _model;
         private Tokenizer _tokenizer;
-        private bool _isInitialized = false;
-
-        private const string SystemPrompt =
-            "You are F.R.I.D.A.Y., a highly advanced, witty personal AI companion. " +
-            "You are talking to your creator. Keep answers conversational, concise, and natural. " +
-            "Never use lists, bullet points, or say 'As an AI'. Speak like a living entity.";
+        private TokenizerStream _tokenizerStream;
+        private bool _isInitialized = false;       
 
         public async Task InitializeAsync(string modelPath)
         {
@@ -25,42 +21,99 @@ namespace Jarvis
             {
                 _model = new Model(modelPath);
                 _tokenizer = new Tokenizer(_model);
+                _tokenizerStream = _tokenizer.CreateStream();
                 _isInitialized = true;
             });
         }
 
-        public async Task<string> ChatLocallyAsync(string userMessage)
+        public async IAsyncEnumerable<string> StreamChatLocallyAsync(string userMessage, List<string> history = null, [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken ct = default)
         {
-            if (!_isInitialized) return "Core is offline, Boss.";
+            if (!_isInitialized) { yield return "Core is offline."; yield break; }
 
-            return await Task.Run(() =>
+            string formattedPrompt = PreparePrompt(userMessage, history);
+            var tokens = _tokenizer.Encode(formattedPrompt);
+            
+            using var generatorParams = new GeneratorParams(_model);
+            generatorParams.SetSearchOption("max_length", 2048);
+            generatorParams.SetSearchOption("temperature", 0.6);
+            generatorParams.SetSearchOption("top_p", 0.9);
+            // Performance optimizations
+            generatorParams.SetSearchOption("do_sample", true);
+
+            var channel = System.Threading.Channels.Channel.CreateUnbounded<string>();
+
+            _ = Task.Run(() =>
             {
-                string formattedPrompt =
-                    $"<|begin_of_text|><|start_header_id|>system<|end_header_id|>\n\n{SystemPrompt}<|eot_id|>" +
-                    $"<|start_header_id|>user<|end_header_id|>\n\n{userMessage}<|eot_id|>" +
-                    $"<|start_header_id|>assistant<|end_header_id|>\n\n";
-
-                using var sequences = _tokenizer.Encode(formattedPrompt);
-                using var generatorParams = new GeneratorParams(_model);
-
-                generatorParams.SetSearchOption("max_length", 100);
-                generatorParams.SetSearchOption("temperature", 0.6);
-                generatorParams.SetSearchOption("top_p", 0.9);
-
-                using var generator = new Generator(_model, generatorParams);
-                generator.AppendTokenSequences(sequences);
-
-                StringBuilder responseBuilder = new StringBuilder();
-
-                while (!generator.IsDone())
+                try
                 {
-                    generator.GenerateNextToken();
-                    var decodedToken = _tokenizer.Decode(new[] { generator.GetSequence(0)[^1] });
-                    responseBuilder.Append(decodedToken);
-                }
+                    using var generator = new Generator(_model, generatorParams);
+                    generator.AppendTokenSequences(tokens);
 
-                return responseBuilder.ToString().Replace("<|eot_id|>", "").Replace("<|end_of_text|>", "").Trim();
-            });
+                    while (!generator.IsDone() && !ct.IsCancellationRequested)
+                    {
+                        generator.GenerateNextToken();
+                        var seq = generator.GetSequence(0);
+                        var token = _tokenizerStream.Decode(seq[^1]);
+                        channel.Writer.TryWrite(token);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine("Generation Error: " + ex.Message);
+                }
+                finally
+                {
+                    channel.Writer.Complete();
+                }
+            }, ct);
+
+            await foreach (var token in channel.Reader.ReadAllAsync(ct))
+            {
+                yield return token;
+            }
+        }
+
+        private string PreparePrompt(string userMessage, List<string> history)
+        {
+            string systemPrompt = "You are Jarvis, a sophisticated AI with a dry wit and human-like conversational patterns. Speak naturally, efficiently, and interact like a highly refined digital butler. Avoid robotic phrases.";
+            var promptBuilder = new StringBuilder();
+            promptBuilder.Append($"<|begin_of_text|><|start_header_id|>system<|end_header_id|>\n\n{systemPrompt}<|eot_id|>");
+
+            if (history != null)
+            {
+                foreach (var h in history)
+                {
+                    int separatorIndex = h.IndexOf(':');
+                    if (separatorIndex > 0)
+                    {
+                        string role = h.Substring(0, separatorIndex).Trim();
+                        string message = h.Substring(separatorIndex + 1).Trim();
+
+                        if (role.Equals("Jarvis", StringComparison.OrdinalIgnoreCase))
+                        {
+                            promptBuilder.Append($"<|start_header_id|>assistant<|end_header_id|>\n\n{message}<|eot_id|>");
+                        }
+                        else
+                        {
+                            promptBuilder.Append($"<|start_header_id|>user<|end_header_id|>\n\n{message}<|eot_id|>");
+                        }
+                    }
+                }
+            }
+
+            promptBuilder.Append($"<|start_header_id|>user<|end_header_id|>\n\n{userMessage}<|eot_id|>");
+            promptBuilder.Append($"<|start_header_id|>assistant<|end_header_id|>\n\n");
+            return promptBuilder.ToString();
+        }
+
+        public async Task<string> ChatLocallyAsync(string userMessage, List<string> history = null)
+        {
+            StringBuilder sb = new StringBuilder();
+            await foreach (var bit in StreamChatLocallyAsync(userMessage, history))
+            {
+                sb.Append(bit);
+            }
+            return sb.ToString().Replace("<|eot_id|>", "").Replace("<|end_of_text|>", "").Trim();
         }
     }
 }

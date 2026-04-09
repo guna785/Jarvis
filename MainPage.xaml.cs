@@ -1,9 +1,12 @@
-﻿
+
 using CommunityToolkit.Maui.Media;
 using CommunityToolkit.Mvvm.Messaging;
 using Jarvis.Contract;
 using Jarvis.Services;
+using Jarvis.Models;
 using System.Globalization;
+using System.Text;
+using System.Collections.ObjectModel;
 
 namespace Jarvis;
 
@@ -18,14 +21,23 @@ public partial class MainPage : ContentPage
     private bool _isSystemActive = false;
     // --- THE A.I. BRAIN ---
     private LocalAIEngine _aiCore;
+    // private BiometricService _biometricService; // Removed biometrics
+    private JarvisDatabase _db;
+    private Jarvis.Models.UserProfile _cachedUser;
+    private bool _isAwaitingNewUserName = false;
+    private float[] _pendingVoicePrint;
+    private CancellationTokenSource _currentAiCts;
+    private ObservableCollection<ChatHistory> _chatItems = new();
     public MainPage(IContinuousMicService micService)
     {
         InitializeComponent();
         _micService = micService;
 
+        HistoryView.ItemsSource = _chatItems;
         WeakReferenceMessenger.Default.Register<SpeechUpdateMessage>(this, OnSpeechMessageReceived);
-        // 2. Instantiate the AI Engine
+        // 2. Instantiate the AI Engine and Services
         _aiCore = new LocalAIEngine();
+        _db = new JarvisDatabase();
 
         // 3. Boot the AI in the background
         // IMPORTANT: Change this path to wherever you extracted the ONNX files on the device!
@@ -39,33 +51,84 @@ public partial class MainPage : ContentPage
             // 1. Extract files to the physical phone storage FIRST
             await ExtractAIFilesToDeviceAsync();
             MainThread.BeginInvokeOnMainThread(() => TranscriptLabel.Text = "Waking up Neural Net...");
-
             await SpeakWithUI("Booting Neural Net...");
             await _aiCore.InitializeAsync(modelDirectory);
+            // _biometricService.Initialize(Path.Combine(modelDirectory, "ecapa_tdnn.onnx")); // Removed biometrics
             MainThread.BeginInvokeOnMainThread(() => TranscriptLabel.Text = "System Standby.");
             await SpeakWithUI("System Standby.");
-            await CheckAndRequestMicrophonePermission();
 
+            // Initialize current user after everything is ready
+            var allUsers = await _db.GetAllUsersAsync();
+            if (allUsers.Count > 0) 
+            {
+                _cachedUser = allUsers[0];
+                var history = await _db.GetFullHistoryAsync(_cachedUser.Id, 20);
+                MainThread.BeginInvokeOnMainThread(() => {
+                    foreach (var h in history) _chatItems.Add(h);
+                    ScrollToBottom();
+                });
+            }
+            
+            // Turn on Mic only after everything is loaded
+            _micService.StartListening();
+            MainThread.BeginInvokeOnMainThread(() => {
+                TranscriptLabel.Text = "Listening...";
+                try { Vibration.Default.Vibrate(TimeSpan.FromMilliseconds(150)); } catch { }
+            });
         });
 
     }
 
+    // This runs automatically right after the UI finishes drawing on the screen
+    protected override async void OnAppearing()
+    {
+        base.OnAppearing();
+
+        // Request permissions safely on the UI thread
+        await CheckAndRequestMicrophonePermission();
+
+        // Optional: Start the idle animation as soon as the app opens
+        SetNormalState();
+    }
+
+    private bool _isProcessing = false;
     private void OnSpeechMessageReceived(object recipient, SpeechUpdateMessage message)
     {
-        // ALWAYS update UI on the Main Thread!
-        MainThread.BeginInvokeOnMainThread(async () =>
+        // Handle UI updates for partial results immediately on MainThread
+        if (!message.IsFinalCommand)
         {
-            if (message.IsFinalCommand)
+            MainThread.BeginInvokeOnMainThread(() =>
             {
-                TranscriptLabel.Text = $"> {message.Text}";
+                // Real-time interruption check
+                if ((_isSpeaking || _isThinking) && !string.IsNullOrWhiteSpace(message.Text) && message.Text.Length > 5)
+                {
+                    _currentAiCts?.Cancel();
+                }
+                TranscriptLabel.Text = message.Text;
+            });
+            return;
+        }
 
-                // The user finished speaking. Send to Llama AI!
-                await ProcessCommand(message.Text);
-            }
-            else
+        // Final command processing should start in background
+        Task.Run(async () =>
+        {
+            if (_isProcessing) return; // Prevent overlapping commands
+            _isProcessing = true;
+
+            try
             {
-                // The user is still talking. Show the live typing effect.
-                TranscriptLabel.Text = message.Text;                
+                // 1. Kill any active AI/TTS tasks
+                _currentAiCts?.Cancel();
+                _currentAiCts = new CancellationTokenSource();
+                var ct = _currentAiCts.Token;
+
+                MainThread.BeginInvokeOnMainThread(() => TranscriptLabel.Text = $"> {message.Text}");
+                
+                await ProcessCommand(message.Text, message.RawAudio, ct);
+            }
+            finally
+            {
+                _isProcessing = false;
             }
         });
     }
@@ -73,9 +136,10 @@ public partial class MainPage : ContentPage
     {
         string targetDirectory = FileSystem.AppDataDirectory;
 
-        // The exact 6 files you downloaded from HuggingFace
+        // The exact files you downloaded from HuggingFace
         string[] aiFiles = new string[]
         {
+        // "ecapa_tdnn.onnx", // Removed biometrics
         "model.onnx",
         "model.onnx.data",
         "genai_config.json",
@@ -84,27 +148,25 @@ public partial class MainPage : ContentPage
         "special_tokens_map.json"
         };
 
-        foreach (var fileName in aiFiles)
+        var extractionTasks = aiFiles.Select(async fileName =>
         {
             string targetFilePath = Path.Combine(targetDirectory, fileName);
-
-            // ONLY copy if it doesn't exist. We don't want to copy 1.3GB every time!
             if (!File.Exists(targetFilePath))
             {
-                //MainThread.BeginInvokeOnMainThread(() => TranscriptLabel.Text = $"Extracting {fileName}...");
-
-                try
-                {
-                    using var stream = await FileSystem.OpenAppPackageFileAsync(fileName);
-                    using var memoryStream = File.Create(targetFilePath);
-                    await stream.CopyToAsync(memoryStream);
-                }
-                catch (Exception ex)
-                {
-                    //MainThread.BeginInvokeOnMainThread(() => TranscriptLabel.Text = $"ERR extracting {fileName}: {ex.Message}");
-                    return; // Stop the boot process if a file is missing
-                }
+                using var stream = await FileSystem.OpenAppPackageFileAsync(fileName);
+                using var memoryStream = File.Create(targetFilePath, 4096, FileOptions.Asynchronous);
+                await stream.CopyToAsync(memoryStream);
             }
+        });
+
+        try
+        {
+            await Task.WhenAll(extractionTasks);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Extraction error: {ex.Message}");
+            return;
         }
     }
 
@@ -116,36 +178,134 @@ public partial class MainPage : ContentPage
 
     // --- COMMAND PROCESSING ---
 
-    private async Task ProcessCommand(string command)
+    private async Task ProcessCommand(string command, byte[] rawAudio, CancellationToken ct)
     {
-        command = command.ToLower();
-        SetThinkingState();
-        await Task.Delay(1000); // Simulate API call / AI processing
-        // 2. Check for manual override commands
-        if (command.ToLower().Contains("shutdown") || command.ToLower().Contains("stop system"))
-        {
-            await SpeakWithUI("Powering down local host. Goodbye.");
-            //OnSystemToggleClicked(null, null); // Force toggle off
-            return;
-        }
-
-        // 3. Send the command to the local Llama 3.2 Model
-        string aiResponse;
         try
         {
-            _micService.StopListening(); // Pause ears while thinking/speaking
-            aiResponse = await _aiCore.ChatLocallyAsync(command);
-            if (string.IsNullOrWhiteSpace(aiResponse))
+            command = command.ToLower();
+            MainThread.BeginInvokeOnMainThread(() => SetThinkingState());
+            await Task.Delay(100, ct); 
+
+            // IDENTIFICATION: Check if we have a cached user or need to find/prompt
+            if (_cachedUser == null)
             {
-                return;
+                if (_isAwaitingNewUserName)
+                {
+                    string parsedName = ParseNameFromText(command);
+                    _cachedUser = await _db.GetOrCreateUserAsync(parsedName);
+                    _isAwaitingNewUserName = false;
+                    await SpeakWithUI($"Welcome to the system, {parsedName}.", ct);
+                    return;
+                }
+                else
+                {
+                    // Check if any user exists in DB
+                    var allUsers = await _db.GetAllUsersAsync();
+                    if (allUsers.Count > 0)
+                    {
+                        // Default to the first user for now, or we could ask "Who is speaking?" 
+                        // But since we removed biometrics, we'll just use the last used or first one.
+                        _cachedUser = allUsers[0];
+                    }
+                    else
+                    {
+                        _isAwaitingNewUserName = true;
+                        await SpeakWithUI("Identify yourself. What is your name?", ct);
+                        return;
+                    }
+                }
             }
-            _micService.StartListening();
-            await SpeakWithUI(aiResponse);
+
+            var currentUser = _cachedUser;
+
+            var history = await _db.GetRecentHistoryAsync(currentUser.Id, limit: 6);
+            
+            // Log User Message to UI
+            var userMsg = new ChatHistory { Role = currentUser.Name, Message = command, Timestamp = DateTime.Now };
+            MainThread.BeginInvokeOnMainThread(() => {
+                _chatItems.Add(userMsg);
+                ScrollToBottom();
+            });
+            await _db.SaveMessageAsync(currentUser.Id, currentUser.Name, command);
+
+            StringBuilder fullResponse = new StringBuilder();
+            StringBuilder sentenceBuffer = new StringBuilder();
+            
+            // Stop mic to prevent Jarvis from hearing himself
+            _micService.StopListening(); 
+            SetSpeakingState();
+
+            try {
+                await foreach (var token in _aiCore.StreamChatLocallyAsync(command, history, ct))
+                {
+                    if (ct.IsCancellationRequested) break;
+
+                    string cleanToken = token.Replace("<|eot_id|>", "").Replace("<|end_of_text|>", "");
+                    fullResponse.Append(cleanToken);
+                    sentenceBuffer.Append(cleanToken);
+
+                    // Throttle UI updates to every 3 tokens or on sentence completion
+                    if (fullResponse.Length % 3 == 0 || cleanToken.Contains("."))
+                    {
+                        MainThread.BeginInvokeOnMainThread(() => TranscriptLabel.Text = fullResponse.ToString());
+                    }
+
+                    if (cleanToken.Contains(".") || cleanToken.Contains("!") || cleanToken.Contains("?"))
+                    {
+                        string toSpeak = sentenceBuffer.ToString().Trim();
+                        if (!string.IsNullOrWhiteSpace(toSpeak))
+                        {
+                            await TextToSpeech.Default.SpeakAsync(toSpeak, new SpeechOptions { Pitch = 1.0f, Volume = 1.0f }, ct);
+                            sentenceBuffer.Clear();
+                        }
+                    }
+                }
+
+                if (!ct.IsCancellationRequested)
+                {
+                    string finalRemainder = sentenceBuffer.ToString().Trim();
+                    if (!string.IsNullOrWhiteSpace(finalRemainder))
+                    {
+                        await TextToSpeech.Default.SpeakAsync(finalRemainder, new SpeechOptions { Pitch = 1.0f, Volume = 1.0f }, ct);
+                    }
+
+                    if (fullResponse.Length > 0)
+                    {
+                        var responseText = fullResponse.ToString().Trim();
+                        var jarvisMsg = new ChatHistory { Role = "Jarvis", Message = responseText, Timestamp = DateTime.Now };
+                        MainThread.BeginInvokeOnMainThread(() => {
+                            _chatItems.Add(jarvisMsg);
+                            ScrollToBottom();
+                        });
+                        await _db.SaveMessageAsync(currentUser.Id, "Jarvis", responseText);
+                    }
+                }
+            }
+            catch (OperationCanceledException) { 
+                 // User interrupted, do nothing special, finally block will clean up
+            }
         }
         catch (Exception ex)
         {
-            aiResponse = "I encountered a neural net error while processing that.";
-            Console.WriteLine($"AI Error: {ex.Message}");
+            Console.WriteLine($"System Error: {ex.Message}");
+            await SpeakWithUI("System error in neural net. Attempting to recover.");
+        }
+        finally
+        {
+            _isSpeaking = false;
+            MainThread.BeginInvokeOnMainThread(() => {
+                ClearStates();
+                SetNormalState();
+            });
+            
+            // Turn Mic Back on and Notify User
+            _micService.StartListening();
+            
+            MainThread.BeginInvokeOnMainThread(() => {
+                TranscriptLabel.Text = "Listening...";
+                // Haptic feedback to indicate mic is hot
+                try { Vibration.Default.Vibrate(TimeSpan.FromMilliseconds(100)); } catch { }
+            });
         }
     }
 
@@ -161,8 +321,8 @@ public partial class MainPage : ContentPage
             _isSystemActive = false;
             return false;
         }
-        _micService.StartListening();
-        await SpeakWithUI("Systems online. I am ready, Boss.");
+       
+       // await SpeakWithUI("Systems online. I am ready.");
         return true;
     }
 
@@ -171,6 +331,8 @@ public partial class MainPage : ContentPage
         _isThinking = false;
         _isSpeaking = false;
         this.AbortAnimation(AnimationHandle);
+        this.AbortAnimation(AnimationHandle + "2");
+        this.AbortAnimation(AnimationHandle + "3");
 
         // Reset Visuals
         MainCore.Scale = 1; MainCore.Opacity = 1;
@@ -186,23 +348,26 @@ public partial class MainPage : ContentPage
         var parentAnim = new Animation();
 
         // 1. Holographic Scanner moving up and down the grid
-        var scannerDown = new Animation(v => ScannerLine.TranslationY = v, 0, 360, Easing.SinInOut);
-        var scannerUp = new Animation(v => ScannerLine.TranslationY = v, 360, 0, Easing.SinInOut);
+        var scannerDown = new Animation(v => ScannerLine.TranslationY = v, 0, 800, Easing.SinInOut);
+        var scannerUp = new Animation(v => ScannerLine.TranslationY = v, 800, 0, Easing.SinInOut);
 
-        // 2. Slow, multi-layered data ring rotation
+        // 2. High-Tech orbital rotation
         var ring1Spin = new Animation(v => DataRing1.Rotation = v, 0, 360);
         var ring2Spin = new Animation(v => DataRing2.Rotation = v, 0, -360);
         var qRingSpin = new Animation(v => QuantumRing.Rotation = v, 0, 360);
+        var inner1Spin = new Animation(v => InnerRing1.Rotation = v, 0, -720);
+        var inner2Spin = new Animation(v => InnerRing2.Rotation = v, 0, 360);
 
-        // 3. Very subtle nanotech breathing
-        var coreBreatheUp = new Animation(v => MainCore.Scale = v, 0.98, 1.02, Easing.CubicInOut);
-        var coreBreatheDown = new Animation(v => MainCore.Scale = v, 1.02, 0.98, Easing.CubicInOut);
+        // 3. Subtle nanotech breathing
+        var coreBreatheUp = new Animation(v => MainCore.Scale = v, 0.95, 1.05, Easing.CubicInOut);
+        var coreBreatheDown = new Animation(v => MainCore.Scale = v, 1.05, 0.95, Easing.CubicInOut);
 
         parentAnim.Add(0, 0.5, scannerDown); parentAnim.Add(0.5, 1, scannerUp);
         parentAnim.Add(0, 1, ring1Spin); parentAnim.Add(0, 1, ring2Spin); parentAnim.Add(0, 1, qRingSpin);
+        parentAnim.Add(0, 1, inner1Spin); parentAnim.Add(0, 1, inner2Spin);
         parentAnim.Add(0, 0.5, coreBreatheUp); parentAnim.Add(0.5, 1, coreBreatheDown);
 
-        parentAnim.Commit(this, AnimationHandle, length: 8000, repeat: () => true);
+        parentAnim.Commit(this, AnimationHandle, length: 10000, repeat: () => true);
     }
 
     private void SetThinkingState()
@@ -210,9 +375,10 @@ public partial class MainPage : ContentPage
         ClearStates();
         _isThinking = true;
 
-        // Background high-speed data spin
-        new Animation(v => DataRing2.Rotation = v, 0, 720).Commit(this, AnimationHandle, length: 2000, repeat: () => true);
-        new Animation(v => QuantumRing.Rotation = v, 0, -360).Commit(this, AnimationHandle + "2", length: 1000, repeat: () => true);
+        // Background high-speed technical spin
+        new Animation(v => InnerRing1.Rotation = v, 0, 1080).Commit(this, AnimationHandle, length: 1500, repeat: () => true);
+        new Animation(v => InnerRing2.Rotation = v, 0, -720).Commit(this, AnimationHandle + "2", length: 1000, repeat: () => true);
+        new Animation(v => QuantumRing.Rotation = v, 0, 360).Commit(this, AnimationHandle + "3", length: 500, repeat: () => true);
 
         // REAL-TIME CHROMATIC GLITCH ENGINE
         // This makes the core look like it's calculating so fast it's distorting reality
@@ -294,25 +460,64 @@ public partial class MainPage : ContentPage
     /// <summary>
     /// Synchronizes the TTS voice with the Holographic Speaking UI
     /// </summary>
-    private async Task SpeakWithUI(string textToSay)
+    private async Task SpeakWithUI(string textToSay, CancellationToken ct = default)
     {
         // 1. Trigger the visual "Speaking" state (Holographic Sonar Ripples)
-        SetSpeakingState();
+        MainThread.BeginInvokeOnMainThread(() => SetSpeakingState());
 
         // 2. Configure the voice (Optional: Adjust pitch to sound more robotic/AI)
         var speechOptions = new SpeechOptions()
         {
-            Pitch = 1.2f,  // 1.0 is normal. Higher is more feminine/synthetic, lower is deeper.
+            Pitch = 1.0f,  // 1.0 is natural human pitch.
             Volume = 1.0f
         };
 
         // 3. Speak the text and await its completion
         // The UI will continue its random 200ms speaking loop while this runs
-        await TextToSpeech.Default.SpeakAsync(textToSay, speechOptions);
-        // 4. THE LOOP TRIGGER: Once speech finishes, listen again!
+        try 
+        {
+            await TextToSpeech.Default.SpeakAsync(textToSay, speechOptions, ct);
+        }
+        catch (OperationCanceledException) { } // Silence cancel logs
 
         // 4. Speech is finished. Return the visual UI to the normal idle state.
-        SetNormalState();
+        MainThread.BeginInvokeOnMainThread(() => SetNormalState());
     }
 
+    /// <summary>
+    /// Extract a name from natural language input (e.g., "My name is John" -> "John")
+    /// </summary>
+    private string ParseNameFromText(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text)) return "User";
+
+        string cleanText = text.Trim().TrimEnd('.', '!', '?');
+        string[] prefixes = { "my name is ", "i am ", "i'm ", "call me ", "it's ", "it is ", "this is " };
+
+        foreach (var prefix in prefixes)
+        {
+            if (cleanText.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+            {
+                string result = cleanText.Substring(prefix.Length).Trim();
+                // Capitalize first letter
+                if (result.Length > 0)
+                    return char.ToUpper(result[0]) + result.Substring(1);
+                return result;
+            }
+        }
+
+        // Fallback: return the whole thing capitalized
+        if (cleanText.Length > 0)
+            return char.ToUpper(cleanText[0]) + cleanText.Substring(1);
+
+        return cleanText;
+    }
+
+    private void ScrollToBottom()
+    {
+        if (_chatItems.Count > 0)
+        {
+            HistoryView.ScrollTo(_chatItems.Count - 1, position: ScrollToPosition.End, animate: true);
+        }
+    }
 }
