@@ -1,17 +1,18 @@
-﻿using Android.Content;
-using Jarvis.Contract;
+using Android.Content;
+using Visor.Contract;
 using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace Jarvis.Services
+namespace Visor.Services
 {
     public class ContinuousMicImplementation : IContinuousMicService
     {
         public void StartListening()
         {
             var context = global::Android.App.Application.Context;
-            var intent = new Intent(context, typeof(Jarvis.Services.AndroidContinuousMicService));
+            var intent = new Intent(context, typeof(Visor.Services.AndroidContinuousMicService));
+            intent.SetAction("START_LISTENING");
 
             if (global::Android.OS.Build.VERSION.SdkInt >= global::Android.OS.BuildVersionCodes.O)
                 context.StartForegroundService(intent);
@@ -22,8 +23,13 @@ namespace Jarvis.Services
         public void StopListening()
         {
             var context = global::Android.App.Application.Context;
-            var intent = new Intent(context, typeof(Jarvis.Services.AndroidContinuousMicService));
-            context.StopService(intent);
+            var intent = new Intent(context, typeof(Visor.Services.AndroidContinuousMicService));
+            intent.SetAction("STOP_LISTENING");
+
+            if (global::Android.OS.Build.VERSION.SdkInt >= global::Android.OS.BuildVersionCodes.O)
+                context.StartForegroundService(intent);
+            else
+                context.StartService(intent);
         }
     }
 }

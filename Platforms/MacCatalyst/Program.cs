@@ -1,7 +1,7 @@
-﻿using ObjCRuntime;
+using ObjCRuntime;
 using UIKit;
 
-namespace Jarvis;
+namespace Visor;
 
 public class Program
 {

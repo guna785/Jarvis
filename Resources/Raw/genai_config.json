@@ -1,7 +1,7 @@
 {
     "model": {
         "bos_token_id": 128000,
-        "context_length": 131072,
+        "context_length": 4096,
         "decoder": {
             "session_options": {
                 "log_id": "onnxruntime-genai",
@@ -39,7 +39,7 @@
         "do_sample": true,
         "early_stopping": true,
         "length_penalty": 1.0,
-        "max_length": 131072,
+        "max_length": 4096,
         "min_length": 0,
         "no_repeat_ngram_size": 0,
         "num_beams": 1,

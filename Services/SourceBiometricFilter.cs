@@ -1,7 +1,7 @@
-﻿using Microsoft.ML.OnnxRuntime;
+using Microsoft.ML.OnnxRuntime;
 using Microsoft.ML.OnnxRuntime.Tensors;
 
-namespace Jarvis.Services;
+namespace Visor.Services;
 
 public class BiometricService
 {

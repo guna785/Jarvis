@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using System.Text;
 using Model = Microsoft.ML.OnnxRuntimeGenAI.Model;
 
-namespace Jarvis
+namespace Visor
 {
     public class LocalAIEngine
     {
@@ -17,12 +17,24 @@ namespace Jarvis
         {
             if (_isInitialized) return;
 
+            Console.WriteLine($"[LocalAIEngine] Initializing model from: {modelPath}");
+
             await Task.Run(() =>
             {
-                _model = new Model(modelPath);
-                _tokenizer = new Tokenizer(_model);
-                _tokenizerStream = _tokenizer.CreateStream();
-                _isInitialized = true;
+                try
+                {
+                    _model = new Model(modelPath);
+                    _tokenizer = new Tokenizer(_model);
+                    _tokenizerStream = _tokenizer.CreateStream();
+                    _isInitialized = true;
+                    Console.WriteLine("[LocalAIEngine] Initialization successful.");
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[LocalAIEngine] CRITICAL INIT ERROR: {ex.Message}");
+                    Console.WriteLine(ex.StackTrace);
+                    throw; // Re-throw to be caught by MainPage
+                }
             });
         }
 
@@ -53,10 +65,17 @@ namespace Jarvis
                     {
                         generator.GenerateNextToken();
                         var seq = generator.GetSequence(0);
-                        var token = _tokenizerStream.Decode(seq[^1]);
-                        channel.Writer.TryWrite(token);
+                        if (seq.Length > 0)
+                        {
+                            var token = _tokenizerStream.Decode(seq[^1]);
+                            if (!string.IsNullOrEmpty(token))
+                            {
+                                channel.Writer.TryWrite(token);
+                            }
+                        }
                     }
                 }
+                catch (OperationCanceledException) { }
                 catch (Exception ex)
                 {
                     Console.WriteLine("Generation Error: " + ex.Message);
@@ -75,7 +94,9 @@ namespace Jarvis
 
         private string PreparePrompt(string userMessage, List<string> history)
         {
-            string systemPrompt = "You are Jarvis, a sophisticated AI with a dry wit and human-like conversational patterns. Speak naturally, efficiently, and interact like a highly refined digital butler. Avoid robotic phrases.";
+            string currentTime = DateTime.Now.ToString("dddd, MMMM dd, yyyy HH:mm:ss");
+            string systemPrompt = $"You are Visor, a sophisticated AI with a dry wit and human-like conversational patterns. Speak naturally, efficiently, and interact like a highly refined digital butler. Keep replies short. Current context: {currentTime}. You are aware of the time and can act accordingly. Protocols: If the user wants to call someone, respond briefly and include exactly one tag in the format '[[CALL:target]]' using the contact name or number to call.";
+            
             var promptBuilder = new StringBuilder();
             promptBuilder.Append($"<|begin_of_text|><|start_header_id|>system<|end_header_id|>\n\n{systemPrompt}<|eot_id|>");
 
@@ -89,7 +110,7 @@ namespace Jarvis
                         string role = h.Substring(0, separatorIndex).Trim();
                         string message = h.Substring(separatorIndex + 1).Trim();
 
-                        if (role.Equals("Jarvis", StringComparison.OrdinalIgnoreCase))
+                        if (role.Equals("Visor", StringComparison.OrdinalIgnoreCase))
                         {
                             promptBuilder.Append($"<|start_header_id|>assistant<|end_header_id|>\n\n{message}<|eot_id|>");
                         }

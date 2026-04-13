@@ -1,7 +1,7 @@
-﻿using Android.App;
+using Android.App;
 using Android.Runtime;
 
-namespace Jarvis;
+namespace Visor;
 
 [Application]
 public class MainApplication : MauiApplication

@@ -2,18 +2,20 @@
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"            
              Shell.NavBarIsVisible="False"
-             Shell.BackgroundColor="Transparent"
+             Shell.BackgroundColor="#01050a"             
              Shell.PresentationMode="NotAnimated"
              BackgroundColor="#01050a"
-             x:Class="Jarvis.MainPage">
-    <Grid BackgroundColor="#01050a">
-        <!-- BACKGROUND LAYER: NEBULA GLOW -->
-        <Ellipse Fill="#00152b" WidthRequest="600" HeightRequest="600" VerticalOptions="Center" HorizontalOptions="Center" Opacity="0.4">
-           
-        </Ellipse>
-
-        <!-- GRID OVERLAY (Futuristic HUD look) -->
-        <Grid Opacity="0.1" InputTransparent="True">
+             x:Class="Visor.MainPage">
+    <Grid RowDefinitions="*">
+        <!-- BASE LEVEL: DEEP SPACE GRADIENT -->
+        <BoxView BackgroundColor="#020810" />
+        
+        <!-- LAYER 1: COMPLEX NEBULA GLOWS -->
+        <Ellipse Fill="#003366" WidthRequest="800" HeightRequest="800" VerticalOptions="Center" HorizontalOptions="Center" Opacity="0.3" TranslationY="-100" />
+        <Ellipse Fill="#001a33" WidthRequest="600" HeightRequest="600" VerticalOptions="End" HorizontalOptions="Start" Opacity="0.2" TranslationX="-200" TranslationY="200" />
+        
+        <!-- LAYER 2: HOLOGRAPHIC DATA GRID -->
+        <Grid Opacity="0.05" InputTransparent="True">
             <Grid.RowDefinitions>
                 <RowDefinition Height="20" />
                 <RowDefinition Height="*" />
@@ -24,112 +26,161 @@
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="20" />
             </Grid.ColumnDefinitions>
+            <BoxView Grid.Row="1" Grid.Column="1" HorizontalOptions="Center" WidthRequest="1" Color="#00fbff" />
+            <BoxView Grid.Row="1" Grid.Column="1" VerticalOptions="Center" HeightRequest="1" Color="#00fbff" />
             
-            <Rectangle Grid.Row="1" Grid.Column="1" Stroke="#00fbff" StrokeThickness="0.5" Fill="Transparent" />
-            <BoxView Grid.Row="0" Grid.RowSpan="3" Grid.Column="1" WidthRequest="0.5" Color="#00fbff" HorizontalOptions="Center" />
-            <BoxView Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="3" HeightRequest="0.5" Color="#00fbff" VerticalOptions="Center" />
+            <Rectangle Grid.Row="1" Grid.Column="1" Stroke="#00fbff" StrokeThickness="0.2" Fill="Transparent" Opacity="0.5" />
         </Grid>
 
-        <!-- SCANNING LINE ELEMENT -->
-        <BoxView x:Name="ScannerLine" HeightRequest="1" WidthRequest="600" VerticalOptions="Start" HorizontalOptions="Center" Color="#00fbff" Opacity="0.5">
+        <!-- LAYER 3: SCANNING PULSE LINE -->
+        <BoxView x:Name="ScannerLine" HeightRequest="2" VerticalOptions="Start" HorizontalOptions="Fill" Color="#00fbff" Opacity="0.4">
             <BoxView.Shadow>
-                <Shadow Brush="#00fbff" Radius="20" Opacity="0.8" Offset="0,0" />
+                <Shadow Brush="#00fbff" Radius="30" Opacity="1" Offset="0,0" />
             </BoxView.Shadow>
         </BoxView>
 
-        <Grid RowDefinitions="*, 250">
+        <Grid RowDefinitions="*, auto">
             
-            <!-- TOP SECTION: THE ARC REACTOR (Centerpiece) -->
-            <Grid Grid.Row="0" VerticalOptions="Center" HorizontalOptions="Center">
+            <!-- TOP SECTION: THE Visor CORE (Mark 85 Inspired) -->
+            <Grid Grid.Row="0" x:Name="ReactorContainer" VerticalOptions="Center" HorizontalOptions="Center" WidthRequest="380" HeightRequest="380">
                 
-                <!-- OUTER ORBITAL RINGS -->
-                <Ellipse x:Name="HoloGlow" Fill="#00e6ff" Opacity="0.03" WidthRequest="450" HeightRequest="450" />
+                <!-- OUTER ORBITAL RINGS (TECHNICAL LAYERS) -->
+                <Ellipse x:Name="HoloGlow" Fill="#00e6ff" Opacity="0.05" HorizontalOptions="Fill" VerticalOptions="Fill" />
                 
-                <Ellipse x:Name="DataRing1" Stroke="#00fbff" StrokeThickness="1" StrokeDashArray="1, 15" WidthRequest="380" HeightRequest="380" Opacity="0.2"/>
-                <Ellipse x:Name="DataRing2" Stroke="#00fbff" StrokeThickness="2" StrokeDashArray="40, 10" WidthRequest="340" HeightRequest="340" Opacity="0.4"/>
+                <Ellipse x:Name="DataRing1" Stroke="#00fbff" StrokeThickness="0.5" StrokeDashArray="2, 20" Margin="0" Opacity="0.15"/>
+                <Ellipse x:Name="DataRing2" Stroke="#00fbff" StrokeThickness="1" StrokeDashArray="60, 10" Margin="10" Opacity="0.3"/>
+                <Ellipse x:Name="TechRing3" Stroke="#00fbff" StrokeThickness="2" StrokeDashArray="1, 8" Margin="25" Opacity="0.2"/>
                 
-                <Ellipse Stroke="#003366" StrokeThickness="8" WidthRequest="300" HeightRequest="300" Opacity="0.3"/>
-                <Ellipse x:Name="QuantumRing" Stroke="#00fbff" StrokeThickness="4" StrokeDashArray="2, 4" WidthRequest="280" HeightRequest="280">
+                <!-- PRIMARY TITANIUM RINGS -->
+                <Ellipse Stroke="#0A2A47" StrokeThickness="12" Margin="40" Opacity="0.6"/>
+                <Ellipse x:Name="QuantumRing" Stroke="#00fbff" StrokeThickness="4" StrokeDashArray="3, 5" Margin="45">
                     <Ellipse.Shadow>
-                        <Shadow Brush="#00fbff" Radius="15" Opacity="0.6" />
+                        <Shadow Brush="#00fbff" Radius="20" Opacity="0.8" />
                     </Ellipse.Shadow>
                 </Ellipse>
 
-                <!-- INNER TECHNICAL RINGS -->
-                <Ellipse x:Name="InnerRing1" Stroke="#ffcc00" StrokeThickness="1" StrokeDashArray="5, 60" WidthRequest="220" HeightRequest="220" Opacity="0.6" />
-                <Ellipse x:Name="InnerRing2" Stroke="#00fbff" StrokeThickness="2" StrokeDashArray="10, 5, 2, 5" WidthRequest="200" HeightRequest="200" Opacity="0.8" />
+                <!-- INNER DYNAMIC RINGS -->
+                <Ellipse x:Name="InnerRing1" Stroke="#ffcc00" StrokeThickness="1" StrokeDashArray="4, 100" Margin="75" Opacity="0.8" />
+                <Ellipse x:Name="InnerRing2" Stroke="#00fbff" StrokeThickness="3" StrokeDashArray="15, 5, 2, 5" Margin="85" Opacity="1" />
 
-                <!-- THE CORE (Mark 85 Style) -->
-                <Grid WidthRequest="120" HeightRequest="120" HorizontalOptions="Center" VerticalOptions="Center">
-                    <Ellipse Fill="#ffffff" Opacity="0.1" />
+                <!-- THE SINGULARITY CORE -->
+                <Grid WidthRequest="110" HeightRequest="110" HorizontalOptions="Center" VerticalOptions="Center">
+                    <Ellipse Fill="#ffffff" Opacity="0.05" />
                     
-                    <Polygon x:Name="GlitchCyan" Points="40,0 80,20 80,65 40,85 0,65 0,20" Fill="#00ffff" Opacity="0" TranslationX="-4" TranslationY="3" WidthRequest="80" HeightRequest="85" HorizontalOptions="Center" VerticalOptions="Center" />
-                    <Polygon x:Name="GlitchRed" Points="40,0 80,20 80,65 40,85 0,65 0,20" Fill="#ff0055" Opacity="0" TranslationX="4" TranslationY="-3" WidthRequest="80" HeightRequest="85" HorizontalOptions="Center" VerticalOptions="Center" />
+                    <!-- CHROMATIC ABERRATION LAYERS (Glitch Effect) -->
+                    <Polygon x:Name="GlitchCyan" Points="40,0 80,20 80,65 40,85 0,65 0,20" Fill="#00ffff" Opacity="0" TranslationX="-6" TranslationY="4" WidthRequest="70" HeightRequest="75" HorizontalOptions="Center" VerticalOptions="Center" />
+                    <Polygon x:Name="GlitchRed" Points="40,0 80,20 80,65 40,85 0,65 0,20" Fill="#ff0055" Opacity="0" TranslationX="6" TranslationY="-4" WidthRequest="70" HeightRequest="75" HorizontalOptions="Center" VerticalOptions="Center" />
 
-                    <Polygon x:Name="MainCore" Points="40,0 80,20 80,65 40,85 0,65 0,20" Fill="#ffffff" WidthRequest="80" HeightRequest="85" HorizontalOptions="Center" VerticalOptions="Center">
+                    <!-- MAIN HOUSING -->
+                    <Polygon x:Name="MainCore" Points="40,0 80,20 80,65 40,85 0,65 0,20" Fill="#ffffff" WidthRequest="70" HeightRequest="75" HorizontalOptions="Center" VerticalOptions="Center">
                         <Polygon.Shadow>
-                            <Shadow Brush="#ffffff" Radius="50" Opacity="1" />
+                            <Shadow Brush="#ffffff" Radius="60" Opacity="1" />
                         </Polygon.Shadow>
                     </Polygon>
 
-                    <Ellipse x:Name="SonarRipple1" Stroke="#00fbff" StrokeThickness="6" WidthRequest="80" HeightRequest="80" Opacity="0" />
-                    <Ellipse x:Name="SonarRipple2" Stroke="#00fbff" StrokeThickness="3" WidthRequest="80" HeightRequest="80" Opacity="0" />
+                    <!-- SONAR RIPPLES (Voice Reactive) -->
+                    <Ellipse x:Name="SonarRipple1" Stroke="#00fbff" StrokeThickness="4" WidthRequest="90" HeightRequest="90" Opacity="0" />
+                    <Ellipse x:Name="SonarRipple2" Stroke="#00fbff" StrokeThickness="2" WidthRequest="90" HeightRequest="90" Opacity="0" />
                 </Grid>
             </Grid>
 
-            <!-- BOTTOM SECTION: GLASS HUD CHAT -->
-            <Grid Grid.Row="1" Margin="20,0,20,20">
-                <Border BackgroundColor="#0A1F33" Stroke="#003366" StrokeThickness="2" Opacity="0.85" Padding="0">
+            <!-- BOTTOM SECTION: HOLOGRAPHIC GLASS HUD -->
+            <Grid Grid.Row="1" HeightRequest="320" Margin="15,0,15,25">
+                
+                <!-- GLASSMORPHISM BACKGROUND -->
+                <Border BackgroundColor="#0A1F33" Opacity="0.7" Padding="0" StrokeThickness="0">
                     <Border.StrokeShape>
-                        <RoundRectangle CornerRadius="20,0,20,0" />
+                        <RoundRectangle CornerRadius="25,2,25,2" />
                     </Border.StrokeShape>
                     <Border.Shadow>
-                        <Shadow Brush="#00fbff" Radius="15" Opacity="0.3" Offset="0,0" />
+                        <Shadow Brush="#00fbff" Radius="25" Opacity="0.2" Offset="0,0" />
                     </Border.Shadow>
-                    
-                    <Grid RowDefinitions="*, Auto">
-                        <!-- History Area -->
-                        <CollectionView x:Name="HistoryView" Grid.Row="0" Margin="15,15,15,5" SelectionMode="None">
-                            <CollectionView.ItemsLayout>
-                                <LinearItemsLayout Orientation="Vertical" ItemSpacing="12" />
-                            </CollectionView.ItemsLayout>
-                            <CollectionView.ItemTemplate>
-                                <DataTemplate>
-                                    <VerticalStackLayout Spacing="2">
-                                        <Label Text="{Binding Role}" TextColor="#00fbff" FontSize="9" CharacterSpacing="2" FontAttributes="Bold" />
-                                        <Label Text="{Binding Message}" TextColor="#e0faff" FontSize="13" LineBreakMode="WordWrap" />
-                                        <BoxView HeightRequest="0.5" Color="#1A3A5A" Margin="0,4,0,0"/>
-                                    </VerticalStackLayout>
-                                </DataTemplate>
-                            </CollectionView.ItemTemplate>
-                        </CollectionView>
+                </Border>
+                
+                <!-- HUD DECORATIVE BRACKETS -->
+                <Rectangle WidthRequest="40" HeightRequest="2" BackgroundColor="#00fbff" HorizontalOptions="Start" VerticalOptions="Start" Margin="10" />
+                <Rectangle WidthRequest="2" HeightRequest="40" BackgroundColor="#00fbff" HorizontalOptions="Start" VerticalOptions="Start" Margin="10" />
+                <Rectangle WidthRequest="40" HeightRequest="2" BackgroundColor="#00fbff" HorizontalOptions="End" VerticalOptions="End" Margin="10" />
+                <Rectangle WidthRequest="2" HeightRequest="40" BackgroundColor="#00fbff" HorizontalOptions="End" VerticalOptions="End" Margin="10" />
 
-                        <!-- Live Status Area -->
-                        <VerticalStackLayout Grid.Row="1" BackgroundColor="#0D2A47" Padding="15,10">
+                <Grid RowDefinitions="*, auto">
+                    <!-- CHAT HISTORY VIEW -->
+                    <CollectionView x:Name="HistoryView" Grid.Row="0" Margin="20,25,20,5" SelectionMode="None">
+                        <CollectionView.ItemsLayout>
+                            <LinearItemsLayout Orientation="Vertical" ItemSpacing="15" />
+                        </CollectionView.ItemsLayout>
+                        <CollectionView.ItemTemplate>
+                            <DataTemplate>
+                                <VerticalStackLayout Spacing="4">
+                                    <HorizontalStackLayout Spacing="8">
+                                        <BoxView WidthRequest="2" HeightRequest="10" Color="#00fbff" VerticalOptions="Center" />
+                                        <Label Text="{Binding Role}" TextColor="#00fbff" FontSize="9" CharacterSpacing="2" FontAttributes="Bold" Opacity="0.8" />
+                                        <Label Text="{Binding Timestamp, StringFormat='[{0:HH:mm:ss}]'}" TextColor="#00fbff" FontSize="8" Opacity="0.4" VerticalOptions="Center" />
+                                    </HorizontalStackLayout>
+                                    <Label Text="{Binding Message}" TextColor="#e0faff" FontSize="14" LineBreakMode="WordWrap" Margin="10,0,0,0" />
+                                </VerticalStackLayout>
+                            </DataTemplate>
+                        </CollectionView.ItemTemplate>
+                    </CollectionView>
+
+                    <!-- INTERACTIVE STATUS FOOTER -->
+                    <Grid Grid.Row="1" ColumnDefinitions="*, auto" BackgroundColor="#0D2A47" Padding="20,15">
+                        <VerticalStackLayout Grid.Column="0" Spacing="4">
                             <Label x:Name="TranscriptLabel" 
-                                   Text="CALIBRATING SYSTEMS..." 
+                                   Text="STANDBY: SCANNING FOR VOICE INPUT..." 
                                    TextColor="#00fbff" 
                                    FontAttributes="Bold"
                                    FontSize="11"
                                    CharacterSpacing="1"
-                                   HorizontalOptions="Center" 
-                                   HorizontalTextAlignment="Center" 
                                    MaxLines="2"/>
-                            <BoxView HeightRequest="2" WidthRequest="50" Color="#ffcc00" HorizontalOptions="Center" Margin="0,5,0,0" />
+                            <BoxView x:Name="StatusIndicator" HeightRequest="3" WidthRequest="60" Color="#ffcc00" HorizontalOptions="Start" />
+                        </VerticalStackLayout>
+                        
+                        <!-- HUD HARDWARE FLAVOR -->
+                        <VerticalStackLayout Grid.Column="1" VerticalOptions="End" Spacing="2">
+                            <Label x:Name="SysLoadLabel" Text="SYS_LOAD: 0.04%" TextColor="#00fbff" FontSize="7" Opacity="0.6" HorizontalTextAlignment="End"/>
+                            <Label Text="SIGNAL: ENCRYPTED" TextColor="#00fbff" FontSize="7" Opacity="0.6" HorizontalTextAlignment="End"/>
                         </VerticalStackLayout>
                     </Grid>
-                </Border>
+                </Grid>
             </Grid>
-
         </Grid>
-        
-        <!-- TOP HUD INFO -->
-        <HorizontalStackLayout VerticalOptions="Start" HorizontalOptions="Start" Padding="25,45" Spacing="15" InputTransparent="True">
-            <VerticalStackLayout>
-                <Label Text="CORE STATUS: STABLE" TextColor="#00fbff" FontSize="9" CharacterSpacing="1"/>
-                <Label Text="VIRTUAL ASSISTANT: JARVIS" TextColor="#ffcc00" FontSize="10" FontAttributes="Bold"/>
-            </VerticalStackLayout>
-        </HorizontalStackLayout>
+
+        <!-- TOP FLOATING INFO -->
+        <Grid VerticalOptions="Start" Padding="30,55" IgnoreSafeArea="True">
+            <HorizontalStackLayout HorizontalOptions="Start" Spacing="20">
+                <VerticalStackLayout>
+                    <Label Text="CORE OS: Visor_M85" TextColor="#00fbff" FontSize="10" CharacterSpacing="2" FontAttributes="Bold"/>
+                    <Label x:Name="ClockLabel" Text="00:00:00" TextColor="#ffcc00" FontSize="8" Opacity="0.8" CharacterSpacing="1"/>
+                </VerticalStackLayout>
+            </HorizontalStackLayout>
+            
+            <HorizontalStackLayout HorizontalOptions="End" VerticalOptions="Center">
+                <BoxView WidthRequest="1" HeightRequest="20" Color="#00fbff" Margin="0,0,10,0" Opacity="0.5" />
+                <Label Text="STARK_IND_PROTOTYPE" TextColor="#00fbff" FontSize="8" VerticalOptions="Center" Opacity="0.5"/>
+            </HorizontalStackLayout>
+        </Grid>
+
+        <!-- FULL SCREEN SPLASH OVERLAY (Animated GIF) -->
+        <Grid x:Name="SplashOverlay" BackgroundColor="#000000" VerticalOptions="Fill" HorizontalOptions="Fill" InputTransparent="False" ZIndex="999">
+            <Image Source="visor_splash.png"
+                   Aspect="AspectFit"
+                   HorizontalOptions="Center"
+                   VerticalOptions="Center"
+                   WidthRequest="300"
+                   HeightRequest="300" />
+            
+            <Label x:Name="SplashLoadingText"
+                   Text="INITIALIZING SYSTEM..."
+                   TextColor="#00fbff"
+                   FontSize="14"
+                   FontAttributes="Bold"
+                   HorizontalOptions="Center"
+                   VerticalOptions="End"
+                   Margin="0,0,0,50"
+                   CharacterSpacing="2" />
+        </Grid>
+
 
     </Grid>
 </ContentPage>

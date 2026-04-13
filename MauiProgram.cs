@@ -1,9 +1,9 @@
-﻿using CommunityToolkit.Maui;
-using Jarvis.Contract;
-using Jarvis.Services;
+using CommunityToolkit.Maui;
+using Visor.Contract;
+using Visor.Services;
 using Microsoft.Extensions.Logging;
 
-namespace Jarvis;
+namespace Visor;
 
 public static class MauiProgram
 {
@@ -19,7 +19,9 @@ public static class MauiProgram
 			}).UseMauiCommunityToolkit();
 #if ANDROID
         builder.Services.AddSingleton<IContinuousMicService, ContinuousMicImplementation>();
+        builder.Services.AddSingleton<ICallService, AndroidCallService>();
 #endif
+        builder.Services.AddTransient<MainPage>();
         builder.ConfigureMauiHandlers(handlers => {
 #if ANDROID
             // Pierce through the Activity Background

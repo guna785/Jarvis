@@ -1,6 +1,6 @@
-﻿using Foundation;
+using Foundation;
 
-namespace Jarvis;
+namespace Visor;
 
 [Register("AppDelegate")]
 public class AppDelegate : MauiUIApplicationDelegate

@@ -1,4 +1,4 @@
-﻿namespace Jarvis;
+namespace Visor;
 
 public partial class AppShell : Shell
 {
